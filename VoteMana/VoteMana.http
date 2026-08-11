@@ -1,0 +1,13 @@
+@VoteMana = https://localhost:7045
+@Code = PASTE_POLL_CODE
+@OptionID = 1
+@Token = PASTE_TOKEN_HERE
+
+POST {{VoteMana}}/api/polls/{{Code}}/vote
+Authorization: Bearer {{Token}}
+Content-Type: application/json
+
+{ "pollOptionID": {{OptionID}} }
+
+###
+GET {{VoteMana}}/api/polls/{{Code}}/results

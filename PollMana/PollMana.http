@@ -1,0 +1,8 @@
+@PollMana = https://localhost:7088
+@Token = PASTE_TOKEN_HERE
+
+POST {{PollMana}}/api/polls
+Authorization: Bearer {{Token}}
+Content-Type: application/json
+
+{ "question": "Which programming language do you prefer?", "options": ["C#", "JavaScript", "Python"] }

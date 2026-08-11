@@ -1,0 +1,20 @@
+@ApiGateway = https://localhost:5000
+
+### Register
+POST {{ApiGateway}}/gateway/auth/register
+Content-Type: application/json
+
+{
+  "userName": "demo",
+  "email": "demo@example.com",
+  "password": "Demo123!"
+}
+
+### Login
+POST {{ApiGateway}}/gateway/auth/login
+Content-Type: application/json
+
+{
+  "email": "demo@example.com",
+  "password": "Demo123!"
+}

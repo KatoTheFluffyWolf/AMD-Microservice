@@ -1,0 +1,6 @@
+<Solution>
+  <Project Path="ApiGateway/ApiGateway.csproj" />
+  <Project Path="AuthMana/AuthMana.csproj" />
+  <Project Path="PollMana/PollMana.csproj" />
+  <Project Path="VoteMana/VoteMana.csproj" />
+</Solution>
