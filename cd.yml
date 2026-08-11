@@ -1,0 +1,40 @@
+name: Backend CD Pipeline
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Restore dependencies
+        run: dotnet restore PollBuilderCoursework.slnx
+
+      - name: Build
+        run: dotnet build PollBuilderCoursework.slnx --no-restore --configuration Release
+
+      - name: Test
+        run: dotnet test PollBuilderCoursework.slnx --no-build --configuration Release
+
+      - name: Deploy AuthMana
+        run: curl -f -X POST "${{ secrets.RENDER_AUTH_DEPLOY_HOOK_URL }}"
+
+      - name: Deploy PollMana
+        run: curl -f -X POST "${{ secrets.RENDER_POLL_DEPLOY_HOOK_URL }}"
+
+      - name: Deploy VoteMana
+        run: curl -f -X POST "${{ secrets.RENDER_VOTE_DEPLOY_HOOK_URL }}"
+
+      - name: Deploy ApiGateway
+        run: curl -f -X POST "${{ secrets.RENDER_GATEWAY_DEPLOY_HOOK_URL }}"
