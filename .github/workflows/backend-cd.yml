@@ -1,0 +1,89 @@
+name: Backend CD Pipeline
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Restore dependencies
+        run: dotnet restore PollBuilderCoursework.slnx
+
+      - name: Build
+        run: dotnet build PollBuilderCoursework.slnx --no-restore --configuration Release
+
+      - name: Test
+        run: dotnet test PollBuilderCoursework.slnx --no-build --configuration Release
+
+      - name: Setup Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+
+      - name: Build and Push AuthMana
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: ./AuthMana/Dockerfile
+          push: true
+          tags: |
+            ${{ secrets.DOCKER_USERNAME }}/pollbuilder-authmana:${{ github.sha }}
+            ${{ secrets.DOCKER_USERNAME }}/pollbuilder-authmana:latest
+
+      - name: Build and Push PollMana
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: ./PollMana/Dockerfile
+          push: true
+          tags: |
+            ${{ secrets.DOCKER_USERNAME }}/pollbuilder-pollmana:${{ github.sha }}
+            ${{ secrets.DOCKER_USERNAME }}/pollbuilder-pollmana:latest
+
+      - name: Build and Push VoteMana
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: ./VoteMana/Dockerfile
+          push: true
+          tags: |
+            ${{ secrets.DOCKER_USERNAME }}/pollbuilder-votemana:${{ github.sha }}
+            ${{ secrets.DOCKER_USERNAME }}/pollbuilder-votemana:latest
+
+      - name: Build and Push ApiGateway
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: ./ApiGateway/Dockerfile
+          push: true
+          tags: |
+            ${{ secrets.DOCKER_USERNAME }}/pollbuilder-apigateway:${{ github.sha }}
+            ${{ secrets.DOCKER_USERNAME }}/pollbuilder-apigateway:latest
+
+      - name: Deploy AuthMana
+        run: curl -f -X POST "${{ secrets.RENDER_AUTH_DEPLOY_HOOK_URL }}"
+
+      - name: Deploy PollMana
+        run: curl -f -X POST "${{ secrets.RENDER_POLL_DEPLOY_HOOK_URL }}"
+
+      - name: Deploy VoteMana
+        run: curl -f -X POST "${{ secrets.RENDER_VOTE_DEPLOY_HOOK_URL }}"
+
+      - name: Deploy ApiGateway
+        run: curl -f -X POST "${{ secrets.RENDER_GATEWAY_DEPLOY_HOOK_URL }}"
