@@ -5,7 +5,8 @@ This solution adapts the supplied classroom microservice template to the Poll & 
 ## Projects
 
 - **ApiGateway** - Ocelot API gateway. Vue should send normal REST requests here.
-- **AuthMana** - ASP.NET Core Identity registration/login and JWT generation.
+- **AuthMana** - preserved classroom Identity service. The current Vue application uses Auth0
+  instead, so this service is not used by its sign-in flow.
 - **PollMana** - owns poll creation, retrieval, closing, and poll options.
 - **VoteMana** - owns votes, result aggregation, and the SignalR hub.
 
@@ -22,13 +23,15 @@ The implementation matches the coursework ERD conceptually:
 
 Important rules:
 
-- One user may create many polls.
+- An Auth0 subject may create many polls.
 - One poll has 2-6 options.
 - A poll option belongs to one poll.
-- A logged-in user may vote only once per poll (`PollID + UserID` is unique).
+- A browser voter token may vote only once per poll (`PollID + VoterToken` is unique).
 - `PollID + PollOptionID` is also validated so a vote cannot select an option belonging to another poll.
 
-All services are configured to use the same Neon PostgreSQL database to match the classroom template and the coursework ERD. This is a shared-database microservice-style coursework architecture, not strict database-per-service microservices.
+PollMana and VoteMana use the same Neon PostgreSQL database to match the classroom template and
+the coursework ERD. This is a shared-database microservice-style coursework architecture, not
+strict database-per-service microservices.
 
 ## Local ports
 
@@ -51,9 +54,18 @@ Replace `PASTE_NEON_CONNECTION_STRING_HERE` in the three service `appsettings.js
 
 For a real repository, prefer user-secrets/environment variables rather than committing the connection string.
 
-## 2. Configure JWT
+## 2. Configure Auth0 validation
 
-All three services must use exactly the same `Jwt:Key`, `Jwt:Issuer`, and `Jwt:Audience` values. Replace the development key before deployment.
+Set these environment variables on PollMana. They must match the Auth0 API used by Vue:
+
+```text
+Authentication__Authority=https://YOUR_AUTH0_DOMAIN/
+Authentication__Audience=https://poll-builder-api
+```
+
+Set `FrontendUrls` on ApiGateway, PollMana, and VoteMana to a semicolon-separated list containing
+the local and deployed Vue origins, for example
+`http://localhost:5173;https://YOUR_FRONTEND.vercel.app`.
 
 ## 3. Create the database using EF Core migrations
 
@@ -105,10 +117,10 @@ Each context uses its own EF migrations history table in the shared Neon databas
 
 ## 4. Run the services
 
-Start all four projects. In Visual Studio, configure multiple startup projects, or run each project from a separate terminal:
+Start PollMana, VoteMana and ApiGateway. AuthMana is only needed if the team still wants to
+demonstrate the legacy classroom registration API:
 
 ```bash
-dotnet run --project AuthMana
 dotnet run --project PollMana
 dotnet run --project VoteMana
 dotnet run --project ApiGateway
@@ -117,12 +129,12 @@ dotnet run --project ApiGateway
 REST requests from Vue should go through:
 
 ```text
-https://localhost:5000/gateway/...
+https://apigateway-14el.onrender.com/gateway/...
 ```
 
 ## API through the gateway
 
-### Authentication
+### Legacy AuthMana endpoints (not used by the Vue/Auth0 flow)
 
 - `POST /gateway/auth/register`
 - `POST /gateway/auth/login`
@@ -137,10 +149,10 @@ https://localhost:5000/gateway/...
 
 ### Voting/results
 
-- `POST /gateway/polls/{code}/vote` - authenticated voter
+- `POST /gateway/polls/{code}/vote` - public; body contains `optionIndex` and `voterToken`
 - `GET /gateway/polls/{code}/results`
 
-Use this header for protected endpoints:
+Use this header for creator-only endpoints (`POST /polls`, `GET /mine`, and `PATCH /close`):
 
 ```text
 Authorization: Bearer <token>
@@ -148,22 +160,22 @@ Authorization: Bearer <token>
 
 ## SignalR
 
-For the first local version, Vue connects directly to VoteMana:
+Vue connects directly to the deployed VoteMana hub:
 
 ```text
-https://localhost:7045/hubs/poll
+https://votemana.onrender.com/hubs/poll
 ```
 
 After connecting, invoke:
 
 ```text
-JoinPoll(code)
+JoinPollGroup(code)
 ```
 
 and listen for:
 
 ```text
-PollResultsUpdated
+ResultsUpdated
 ```
 
 The REST API still goes through Ocelot. Keeping the local SignalR connection direct avoids unnecessary gateway/WebSocket complexity while you are building the core coursework. It can later be placed behind the deployment reverse proxy if required.
@@ -176,10 +188,10 @@ The ERD uses the field name `Url`. In this template, `Url` stores the generated 
 
 Create and apply the three initial migrations, then test in this order:
 
-1. register/login;
+1. sign in through Auth0;
 2. create a poll with 2-6 options;
-3. retrieve it using its short code;
-4. vote once;
-5. attempt a second vote with the same account and confirm it is rejected;
+3. retrieve it using its short code in a private/public browser window;
+4. vote once without signing in;
+5. attempt a second vote with the same browser token and confirm it is rejected;
 6. open the results page in another browser window and verify SignalR updates it;
-7. close the poll and confirm further votes are rejected.
+7. close the poll as its Auth0 creator and confirm further votes are rejected.

@@ -3,27 +3,43 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using PollMana.Data;
 using PollMana.Services;
-using System.Text;
 
 var builder = WebApplication.CreateBuilder(args);
 var connectionString = builder.Configuration.GetConnectionString("myContext") ?? throw new InvalidOperationException("Connection string 'myContext' not found.");
 builder.Services.AddDbContext<PollContext>(options => options.UseNpgsql(connectionString, npgsql => npgsql.MigrationsHistoryTable("__EFMigrationsHistory_Poll")));
-var jwtKey = builder.Configuration["Jwt:Key"] ?? throw new InvalidOperationException("Jwt:Key is not configured.");
-builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme).AddJwtBearer(options => options.TokenValidationParameters = new TokenValidationParameters
+var authAuthority = builder.Configuration["Authentication:Authority"]?.TrimEnd('/');
+var authAudience = builder.Configuration["Authentication:Audience"];
+if (string.IsNullOrWhiteSpace(authAuthority)) throw new InvalidOperationException("Authentication:Authority is not configured.");
+if (string.IsNullOrWhiteSpace(authAudience)) throw new InvalidOperationException("Authentication:Audience is not configured.");
+
+builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme).AddJwtBearer(options =>
 {
-    ValidateIssuer = true, ValidateAudience = true, ValidateLifetime = true, ValidateIssuerSigningKey = true,
-    ValidIssuer = builder.Configuration["Jwt:Issuer"], ValidAudience = builder.Configuration["Jwt:Audience"],
-    IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtKey))
+    options.Authority = authAuthority;
+    options.Audience = authAudience;
+    options.RequireHttpsMetadata = true;
+    options.MapInboundClaims = false;
+    options.TokenValidationParameters = new TokenValidationParameters
+    {
+        ValidateIssuer = true,
+        ValidateAudience = true,
+        ValidateLifetime = true,
+        ValidateIssuerSigningKey = true,
+        NameClaimType = "name"
+    };
 });
 builder.Services.AddAuthorization();
 builder.Services.AddScoped<PollService>();
 builder.Services.AddControllers();
 builder.Services.AddOpenApi();
-builder.Services.AddCors(options => options.AddPolicy("VueDev", policy => policy.WithOrigins("http://localhost:5173").AllowAnyHeader().AllowAnyMethod().AllowCredentials()));
+var frontendOrigins = (builder.Configuration["FrontendUrls"]
+        ?? builder.Configuration["FrontendUrl"]
+        ?? "http://localhost:5173")
+    .Split(new[] { ',', ';' }, StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+builder.Services.AddCors(options => options.AddPolicy("VueClient", policy => policy.WithOrigins(frontendOrigins).AllowAnyHeader().AllowAnyMethod().AllowCredentials()));
 var app = builder.Build();
 if (app.Environment.IsDevelopment())
 {
     app.MapOpenApi();
     app.UseHttpsRedirection();
 }
-app.UseCors("VueDev"); app.UseAuthentication(); app.UseAuthorization(); app.MapControllers(); app.Run();
+app.UseCors("VueClient"); app.UseAuthentication(); app.UseAuthorization(); app.MapControllers(); app.Run();

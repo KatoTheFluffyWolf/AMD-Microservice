@@ -18,7 +18,7 @@ public class PollOptionDto
 public class PollDto
 {
     public long PollID { get; set; }
-    public string Url { get; set; } = string.Empty;
+    public string Code { get; set; } = string.Empty;
     public string Question { get; set; } = string.Empty;
     public bool IsClosed { get; set; }
     public DateTime CreatedAt { get; set; }

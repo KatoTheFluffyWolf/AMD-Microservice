@@ -99,31 +99,6 @@ namespace PollMana.Migrations
                         });
                 });
 
-            modelBuilder.Entity("PollMana.Models.UserReference", b =>
-                {
-                    b.Property<string>("UserID")
-                        .HasColumnType("text")
-                        .HasColumnName("UserID");
-
-                    b.HasKey("UserID");
-
-                    b.ToTable("AspNetUsers", null, t =>
-                        {
-                            t.ExcludeFromMigrations();
-                        });
-                });
-
-            modelBuilder.Entity("PollMana.Models.Poll", b =>
-                {
-                    b.HasOne("PollMana.Models.UserReference", "Creator")
-                        .WithMany()
-                        .HasForeignKey("CreatorUserID")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("Creator");
-                });
-
             modelBuilder.Entity("PollMana.Models.PollOption", b =>
                 {
                     b.HasOne("PollMana.Models.Poll", "Poll")
