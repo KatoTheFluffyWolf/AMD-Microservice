@@ -13,13 +13,6 @@ public class PollContext : DbContext
     {
         base.OnModelCreating(modelBuilder);
 
-        modelBuilder.Entity<UserReference>(entity =>
-        {
-            entity.ToTable("AspNetUsers", t => t.ExcludeFromMigrations());
-            entity.HasKey(u => u.UserID);
-            entity.Property(u => u.UserID).HasColumnName("UserID");
-        });
-
         modelBuilder.Entity<Poll>(entity =>
         {
             entity.ToTable("Polls");
@@ -31,7 +24,7 @@ public class PollContext : DbContext
             entity.Property(p => p.CreatorUserID).IsRequired();
             entity.Property(p => p.IsClosed).HasDefaultValue(false);
             entity.Property(p => p.CreatedAt).HasDefaultValueSql("NOW()");
-            entity.HasOne(p => p.Creator).WithMany().HasForeignKey(p => p.CreatorUserID).HasPrincipalKey(u => u.UserID).OnDelete(DeleteBehavior.Cascade);
+            entity.HasIndex(p => p.CreatorUserID);
         });
 
         modelBuilder.Entity<PollOption>(entity =>

@@ -6,14 +6,15 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Configuration.AddJsonFile("ocelot.json", optional: false, reloadOnChange: true);
 builder.Services.AddOcelot(builder.Configuration);
 
-var frontendUrl =
-    builder.Configuration["FrontendUrl"]
-    ?? "http://localhost:5173";
+var frontendOrigins = (builder.Configuration["FrontendUrls"]
+        ?? builder.Configuration["FrontendUrl"]
+        ?? "http://localhost:5173")
+    .Split(new[] { ',', ';' }, StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
 
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("VueClient", policy =>
-        policy.WithOrigins(frontendUrl)
+        policy.WithOrigins(frontendOrigins)
               .AllowAnyHeader()
               .AllowAnyMethod()
               .AllowCredentials());

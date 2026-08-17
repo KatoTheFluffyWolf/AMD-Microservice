@@ -12,5 +12,4 @@ public class Poll
     public DateTime CreatedAt { get; set; }
     public DateTime? ClosedAt { get; set; }
     public ICollection<PollOption> Options { get; set; } = new List<PollOption>();
-    public UserReference? Creator { get; set; }
 }

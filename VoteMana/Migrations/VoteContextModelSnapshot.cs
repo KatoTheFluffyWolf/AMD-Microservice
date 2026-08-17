@@ -58,20 +58,6 @@ namespace VoteMana.Migrations
                         });
                 });
 
-            modelBuilder.Entity("VoteMana.Models.UserReference", b =>
-                {
-                    b.Property<string>("UserID")
-                        .HasColumnType("text")
-                        .HasColumnName("UserID");
-
-                    b.HasKey("UserID");
-
-                    b.ToTable("AspNetUsers", null, t =>
-                        {
-                            t.ExcludeFromMigrations();
-                        });
-                });
-
             modelBuilder.Entity("VoteMana.Models.Vote", b =>
                 {
                     b.Property<long>("VoteID")
@@ -86,9 +72,10 @@ namespace VoteMana.Migrations
                     b.Property<long>("PollOptionID")
                         .HasColumnType("bigint");
 
-                    b.Property<string>("UserID")
+                    b.Property<string>("VoterToken")
                         .IsRequired()
-                        .HasColumnType("text");
+                        .HasMaxLength(128)
+                        .HasColumnType("character varying(128)");
 
                     b.Property<DateTime>("VotedAt")
                         .ValueGeneratedOnAdd()
@@ -97,11 +84,9 @@ namespace VoteMana.Migrations
 
                     b.HasKey("VoteID");
 
-                    b.HasIndex("UserID");
-
                     b.HasIndex("PollID", "PollOptionID");
 
-                    b.HasIndex("PollID", "UserID")
+                    b.HasIndex("PollID", "VoterToken")
                         .IsUnique();
 
                     b.ToTable("Vote", (string)null);
@@ -112,12 +97,6 @@ namespace VoteMana.Migrations
                     b.HasOne("VoteMana.Models.PollReference", "Poll")
                         .WithMany()
                         .HasForeignKey("PollID")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.HasOne("VoteMana.Models.UserReference", "User")
-                        .WithMany()
-                        .HasForeignKey("UserID")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
@@ -132,7 +111,6 @@ namespace VoteMana.Migrations
 
                     b.Navigation("PollOption");
 
-                    b.Navigation("User");
                 });
 #pragma warning restore 612, 618
         }

@@ -68,7 +68,7 @@ public class PollService
 
     private static PollDto Map(Poll poll) => new()
     {
-        PollID = poll.PollID, Url = poll.Url, Question = poll.Question, IsClosed = poll.IsClosed,
+        PollID = poll.PollID, Code = poll.Url, Question = poll.Question, IsClosed = poll.IsClosed,
         CreatedAt = poll.CreatedAt, ClosedAt = poll.ClosedAt,
         Options = poll.Options.OrderBy(o => o.OptionIndex).Select(o => new PollOptionDto { OptionID = o.OptionID, OptionIndex = o.OptionIndex, OptionText = o.OptionText }).ToList()
     };
