@@ -16,12 +16,12 @@ public class PollsController : ControllerBase
     [Authorize, HttpPost]
     public async Task<ActionResult<PollDto>> Create(CreatePollDto dto)
     {
-        var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+        var userId = CurrentUserId();
         if (string.IsNullOrWhiteSpace(userId)) return Unauthorized();
         try
         {
             var poll = await _pollService.CreateAsync(userId, dto);
-            return CreatedAtAction(nameof(GetPoll), new { code = poll.Url }, poll);
+            return CreatedAtAction(nameof(GetPoll), new { code = poll.Code }, poll);
         }
         catch (ArgumentException ex) { return BadRequest(new { message = ex.Message }); }
     }
@@ -36,7 +36,7 @@ public class PollsController : ControllerBase
     [Authorize, HttpGet("mine")]
     public async Task<ActionResult<IEnumerable<PollDto>>> Mine()
     {
-        var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+        var userId = CurrentUserId();
         if (string.IsNullOrWhiteSpace(userId)) return Unauthorized();
         return Ok(await _pollService.GetMineAsync(userId));
     }
@@ -44,7 +44,7 @@ public class PollsController : ControllerBase
     [Authorize, HttpPatch("{code}/close")]
     public async Task<IActionResult> Close(string code)
     {
-        var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+        var userId = CurrentUserId();
         if (string.IsNullOrWhiteSpace(userId)) return Unauthorized();
         return await _pollService.CloseAsync(code, userId) switch
         {
@@ -55,4 +55,7 @@ public class PollsController : ControllerBase
             _ => StatusCode(500)
         };
     }
+
+    private string? CurrentUserId() =>
+        User.FindFirstValue("sub") ?? User.FindFirstValue(ClaimTypes.NameIdentifier);
 }
