@@ -3,4 +3,5 @@
   <Project Path="AuthMana/AuthMana.csproj" />
   <Project Path="PollMana/PollMana.csproj" />
   <Project Path="VoteMana/VoteMana.csproj" />
+  <Project Path="Backend.UnitTests/Backend.UnitTests.csproj" />
 </Solution>
