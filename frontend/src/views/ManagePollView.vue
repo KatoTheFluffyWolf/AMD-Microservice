@@ -1,7 +1,7 @@
 <script setup>
 import { computed, nextTick, onMounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { useAuthentication } from '@/auth/auth0'
+import { invalidateAuthentication } from '@/auth/auth'
 import BaseButton from '@/components/BaseButton.vue'
 import CopyLinkButton from '@/components/CopyLinkButton.vue'
 import ErrorAlert from '@/components/ErrorAlert.vue'
@@ -13,7 +13,6 @@ import { closePoll, getPoll } from '@/services/api'
 
 const route = useRoute()
 const router = useRouter()
-const { login } = useAuthentication()
 
 const code = computed(() => String(route.params.code ?? '').trim())
 const poll = ref(null)
@@ -87,9 +86,7 @@ function normalizedError(error, fallback) {
   return {
     status: Number.isFinite(error?.status) ? error.status : 0,
     message:
-      typeof error?.message === 'string' && error.message.trim()
-        ? error.message.trim()
-        : fallback,
+      typeof error?.message === 'string' && error.message.trim() ? error.message.trim() : fallback,
   }
 }
 
@@ -185,7 +182,7 @@ function applyClosedState(closedPoll = {}) {
     ...closedPoll,
     code: closedPoll.code || poll.value?.code || code.value,
     question: closedPoll.question || poll.value?.question || results.value?.question || '',
-    options: closedPoll.options?.length ? closedPoll.options : poll.value?.options ?? [],
+    options: closedPoll.options?.length ? closedPoll.options : (poll.value?.options ?? []),
     isClosed: true,
   }
 
@@ -212,6 +209,7 @@ async function confirmClosePoll() {
     const status = Number(error?.status ?? 0)
 
     if (status === 401) {
+      invalidateAuthentication()
       closeError.value = 'Your session has expired. Sign in again to manage this poll.'
       requiresLogin.value = true
       finishCloseDialog()
@@ -241,12 +239,16 @@ async function startLogin() {
   isStartingLogin.value = true
 
   try {
-    await login(route.fullPath)
+    await router.push({
+      name: 'login',
+      query: { redirect: route.fullPath },
+    })
   } catch (error) {
     closeError.value =
       typeof error?.message === 'string' && error.message.trim()
         ? error.message.trim()
         : 'Sign-in could not be started. Please try again.'
+  } finally {
     isStartingLogin.value = false
   }
 }
@@ -262,7 +264,9 @@ onMounted(loadPoll)
         <h1 id="manage-title">Manage poll</h1>
         <p class="lead">Share your poll, monitor responses and control whether voting is open.</p>
       </div>
-      <span class="poll-code">Code <strong>{{ code }}</strong></span>
+      <span class="poll-code"
+        >Code <strong>{{ code }}</strong></span
+      >
     </div>
 
     <LoadingState v-if="isInitialLoading" message="Loading creator controls…" />
@@ -291,11 +295,7 @@ onMounted(loadPoll)
       <ErrorAlert v-if="closeError" class="page-alert" :message="closeError" />
 
       <div v-if="requiresLogin" class="login-action">
-        <BaseButton
-          :loading="isStartingLogin"
-          loading-text="Starting sign-in…"
-          @click="startLogin"
-        >
+        <BaseButton :loading="isStartingLogin" loading-text="Starting sign-in…" @click="startLogin">
           Sign in again
         </BaseButton>
       </div>

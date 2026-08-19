@@ -17,8 +17,10 @@ public class JwtTokenService
 
     public string CreateToken(ApplicationUser user)
     {
-        var key = _configuration["Jwt:Key"]
-                  ?? throw new InvalidOperationException("Jwt:Key is not configured.");
+        var key = RequiredConfiguration("Jwt:Key");
+        var issuer = RequiredConfiguration("Jwt:Issuer");
+        var audience = RequiredConfiguration("Jwt:Audience");
+        var expiryMinutes = ExpiryMinutes();
 
         var claims = new List<Claim>
         {
@@ -33,12 +35,31 @@ public class JwtTokenService
             SecurityAlgorithms.HmacSha256);
 
         var token = new JwtSecurityToken(
-            issuer: _configuration["Jwt:Issuer"],
-            audience: _configuration["Jwt:Audience"],
+            issuer: issuer,
+            audience: audience,
             claims: claims,
-            expires: DateTime.UtcNow.AddHours(8),
+            expires: DateTime.UtcNow.AddMinutes(expiryMinutes),
             signingCredentials: credentials);
 
         return new JwtSecurityTokenHandler().WriteToken(token);
+    }
+
+    private string RequiredConfiguration(string key)
+    {
+        var value = _configuration[key];
+        return !string.IsNullOrWhiteSpace(value)
+            ? value
+            : throw new InvalidOperationException($"{key} is not configured.");
+    }
+
+    private int ExpiryMinutes()
+    {
+        var configuredValue = _configuration["Jwt:ExpiryMinutes"];
+        if (string.IsNullOrWhiteSpace(configuredValue)) return 120;
+
+        if (int.TryParse(configuredValue, out var expiryMinutes) && expiryMinutes > 0)
+            return expiryMinutes;
+
+        throw new InvalidOperationException("Jwt:ExpiryMinutes must be a positive integer.");
     }
 }

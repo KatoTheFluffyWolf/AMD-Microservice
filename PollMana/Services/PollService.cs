@@ -15,10 +15,24 @@ public class PollService
 
     public async Task<PollDto> CreateAsync(string creatorUserId, CreatePollDto dto)
     {
-        if (string.IsNullOrWhiteSpace(dto.Question)) throw new ArgumentException("Question is required.");
-        var cleanedOptions = dto.Options.Where(o => !string.IsNullOrWhiteSpace(o)).Select(o => o.Trim()).ToList();
-        if (cleanedOptions.Count < 2 || cleanedOptions.Count > 6) throw new ArgumentException("A poll must contain between 2 and 6 answer options.");
-        if (cleanedOptions.Any(o => o.Length > 200)) throw new ArgumentException("Each answer option must be 200 characters or fewer.");
+        var question = dto.Question?.Trim() ?? string.Empty;
+
+        if (question.Length < 5 || question.Length > 300)
+            throw new ArgumentException("Question must contain between 5 and 300 characters.");
+
+        var cleanedOptions = (dto.Options ?? new List<string>())
+            .Select(option => option.Trim())
+            .Where(option => option.Length > 0)
+            .ToList();
+
+        if (cleanedOptions.Count is < 2 or > 6)
+            throw new ArgumentException("A poll must contain between 2 and 6 answer options.");
+
+        if (cleanedOptions.Any(option => option.Length > 150))
+            throw new ArgumentException("Each answer option must be 150 characters or fewer.");
+
+        if (cleanedOptions.Distinct(StringComparer.OrdinalIgnoreCase).Count() != cleanedOptions.Count)
+            throw new ArgumentException("Answer options must be different.");
 
         var poll = new Poll
         {

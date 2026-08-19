@@ -1,15 +1,15 @@
 # Poll Builder Frontend
 
 A Vue 3 single-page application for creating multiple-choice polls, collecting anonymous votes,
-and displaying live results. REST requests go through the deployed Ocelot gateway, creator
-operations use Auth0 access tokens, and live result updates come directly from VoteMana SignalR.
+and displaying live results. REST requests go through the Ocelot gateway, creator operations use
+AuthMana JWTs, and live result updates come directly from VoteMana SignalR.
 
 ## Technology
 
 - Vue 3 and Vue Router
 - Vitest and Vue Test Utils
 - ESLint, Oxlint, and Prettier
-- Auth0 Vue SDK for creator authentication
+- AuthMana JWT authentication for creator operations
 - SignalR client and Chart.js for live result charts
 
 ## Routes
@@ -36,8 +36,8 @@ npm install
 cp .env.example .env.local
 ```
 
-Set the Auth0 values in `.env.local`. The example already points REST traffic to the Render
-gateway and SignalR traffic to VoteMana.
+Set the API and SignalR URLs in `.env.local`. The example points REST traffic to the Render
+gateway and SignalR traffic to VoteMana; use the local URLs from `INTEGRATION_SETUP.md` for local development.
 
 ## Commands
 

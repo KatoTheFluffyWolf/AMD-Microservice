@@ -51,10 +51,15 @@ builder.Services.AddScoped<JwtTokenService>();
 builder.Services.AddControllers();
 builder.Services.AddOpenApi();
 
+var frontendOrigins = (builder.Configuration["FrontendUrls"]
+        ?? builder.Configuration["FrontendUrl"]
+        ?? "http://localhost:5173")
+    .Split(new[] { ',', ';' }, StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+
 builder.Services.AddCors(options =>
 {
-    options.AddPolicy("VueDev", policy =>
-        policy.WithOrigins("http://localhost:5173")
+    options.AddPolicy("VueClient", policy =>
+        policy.WithOrigins(frontendOrigins)
               .AllowAnyHeader()
               .AllowAnyMethod()
               .AllowCredentials());
@@ -67,7 +72,7 @@ if (app.Environment.IsDevelopment())
     app.MapOpenApi();
     app.UseHttpsRedirection();
 }
-app.UseCors("VueDev");
+app.UseCors("VueClient");
 app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();

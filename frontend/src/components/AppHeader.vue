@@ -1,11 +1,12 @@
 <script setup>
 import { computed, ref } from 'vue'
-import { RouterLink, useRoute } from 'vue-router'
-import { isAuthenticationConfigured, useAuthentication } from '@/auth/auth0'
+import { RouterLink, useRoute, useRouter } from 'vue-router'
+import { useAuthentication } from '@/auth/auth'
 import BaseButton from '@/components/BaseButton.vue'
 
 const route = useRoute()
-const { isLoading, isAuthenticated, user, errorMessage, login, logout } = useAuthentication()
+const router = useRouter()
+const { isLoading, isAuthenticated, user, errorMessage, logout } = useAuthentication()
 
 const pendingAction = ref('')
 const actionError = ref('')
@@ -13,26 +14,26 @@ const actionError = ref('')
 const displayName = computed(() => user.value?.name || user.value?.email || '')
 const visibleError = computed(() => actionError.value || (!isLoading.value && errorMessage.value))
 
-async function handleLogin() {
-  actionError.value = ''
-  pendingAction.value = 'login'
-
-  try {
-    await login(route.fullPath)
-  } catch (error) {
-    actionError.value = error.message || 'Sign-in could not be started. Please try again.'
-    pendingAction.value = ''
-  }
+function guestRoute(name) {
+  const canReturnToCurrentRoute =
+    !['home', 'login', 'register'].includes(String(route.name ?? '')) &&
+    !['/', '/login', '/register'].includes(route.path)
+  return canReturnToCurrentRoute ? { name, query: { redirect: route.fullPath } } : { name }
 }
+
+const loginRoute = computed(() => guestRoute('login'))
+const registerRoute = computed(() => guestRoute('register'))
 
 async function handleLogout() {
   actionError.value = ''
   pendingAction.value = 'logout'
 
   try {
-    await logout()
+    logout()
+    await router.replace({ name: 'home' })
   } catch (error) {
     actionError.value = error.message || 'Sign-out could not be completed. Please try again.'
+  } finally {
     pendingAction.value = ''
   }
 }
@@ -76,16 +77,10 @@ async function handleLogout() {
           </template>
 
           <template v-else>
-            <BaseButton
-              variant="secondary"
-              class="nav-action"
-              :disabled="!isAuthenticationConfigured"
-              :loading="pendingAction === 'login'"
-              loading-text="Signing in…"
-              @click="handleLogin"
-            >
+            <BaseButton variant="secondary" class="nav-action" :to="loginRoute">
               Log in
             </BaseButton>
+            <BaseButton class="nav-action" :to="registerRoute">Register</BaseButton>
           </template>
         </nav>
 

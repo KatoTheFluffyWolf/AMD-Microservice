@@ -18,7 +18,7 @@ public class PollServiceTests
             Options = ["  Vue  ", "React"]
         };
 
-        var result = await service.CreateAsync("auth0|creator-1", request);
+        var result = await service.CreateAsync("creator-1", request);
 
         Assert.Equal("Which framework do you prefer?", result.Question);
         Assert.False(result.IsClosed);
@@ -50,7 +50,7 @@ public class PollServiceTests
         };
 
         var exception = await Assert.ThrowsAsync<ArgumentException>(
-            () => service.CreateAsync("auth0|creator-1", request));
+            () => service.CreateAsync("creator-1", request));
 
         Assert.Contains("between 2 and 6", exception.Message);
         Assert.Empty(context.Polls);
@@ -63,7 +63,7 @@ public class PollServiceTests
         context.Polls.Add(new Poll
         {
             Url = "ABC123",
-            CreatorUserID = "auth0|owner",
+            CreatorUserID = "owner-user-id",
             Question = "A test poll",
             CreatedAt = DateTime.UtcNow,
             IsClosed = false
@@ -71,7 +71,7 @@ public class PollServiceTests
         await context.SaveChangesAsync();
         var service = new PollService(context);
 
-        var status = await service.CloseAsync("ABC123", "auth0|someone-else");
+        var status = await service.CloseAsync("ABC123", "different-user-id");
 
         Assert.Equal(ClosePollStatus.Forbidden, status);
         Assert.False((await context.Polls.SingleAsync()).IsClosed);
@@ -84,7 +84,7 @@ public class PollServiceTests
         context.Polls.Add(new Poll
         {
             Url = "ABC123",
-            CreatorUserID = "auth0|owner",
+            CreatorUserID = "owner-user-id",
             Question = "A test poll",
             CreatedAt = DateTime.UtcNow,
             IsClosed = false
@@ -92,7 +92,7 @@ public class PollServiceTests
         await context.SaveChangesAsync();
         var service = new PollService(context);
 
-        var status = await service.CloseAsync("ABC123", "auth0|owner");
+        var status = await service.CloseAsync("ABC123", "owner-user-id");
 
         var savedPoll = await context.Polls.SingleAsync();
         Assert.Equal(ClosePollStatus.Success, status);

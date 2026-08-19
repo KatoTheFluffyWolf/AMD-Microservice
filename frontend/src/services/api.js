@@ -1,4 +1,4 @@
-import { getAccessToken } from '@/auth/auth0'
+import { getAccessToken, invalidateAuthentication } from '@/auth/auth'
 
 const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL ?? '').trim().replace(/\/+$/, '')
 
@@ -7,7 +7,7 @@ const DEFAULT_ERROR_MESSAGES = Object.freeze({
   401: 'Your session has expired. Please sign in again.',
   403: 'You do not have permission to perform this action.',
   404: 'The requested poll could not be found.',
-  409: 'This action conflicts with the poll\'s current state.',
+  409: "This action conflicts with the poll's current state.",
   410: 'This poll is closed and no longer accepts votes.',
 })
 
@@ -85,7 +85,8 @@ async function parseResponse(response) {
 
 function normalizedApiError(response, payload) {
   const fallback =
-    DEFAULT_ERROR_MESSAGES[response.status] ?? 'The request could not be completed. Please try again.'
+    DEFAULT_ERROR_MESSAGES[response.status] ??
+    'The request could not be completed. Please try again.'
   const serverMessage = messageFromPayload(payload)
   const message =
     response.status < 500 && isSafePublicMessage(serverMessage) ? serverMessage : fallback
@@ -125,7 +126,10 @@ async function apiFetch(path, { method = 'GET', body, requiresAuth = false } = {
   }
 
   const payload = await parseResponse(response)
-  if (!response.ok) throw normalizedApiError(response, payload)
+  if (!response.ok) {
+    if (requiresAuth && response.status === 401) invalidateAuthentication()
+    throw normalizedApiError(response, payload)
+  }
 
   return payload
 }
@@ -146,7 +150,9 @@ function normalizeOption(option, fallbackIndex) {
   }
 
   return {
-    index: Number(valueFrom(option, 'index', 'optionIndex', 'Index', 'OptionIndex') ?? fallbackIndex),
+    index: Number(
+      valueFrom(option, 'index', 'optionIndex', 'Index', 'OptionIndex') ?? fallbackIndex,
+    ),
     text: String(valueFrom(option, 'text', 'optionText', 'label', 'Text', 'OptionText') ?? ''),
   }
 }
@@ -189,11 +195,18 @@ function normalizeResultOption(option, fallbackIndex, totalVotes) {
 export function normalizePollResults(dto, code) {
   const source = dto && typeof dto === 'object' ? dto : {}
   const rawOptions = valueFrom(source, 'options', 'results', 'Options', 'Results') ?? []
-  const suppliedTotal = valueFrom(source, 'totalVotes', 'responseCount', 'TotalVotes', 'ResponseCount')
+  const suppliedTotal = valueFrom(
+    source,
+    'totalVotes',
+    'responseCount',
+    'TotalVotes',
+    'ResponseCount',
+  )
   const calculatedTotal = Array.isArray(rawOptions)
     ? rawOptions.reduce(
         (total, option) =>
-          total + Number(valueFrom(option, 'votes', 'voteCount', 'count', 'Votes', 'VoteCount') ?? 0),
+          total +
+          Number(valueFrom(option, 'votes', 'voteCount', 'count', 'Votes', 'VoteCount') ?? 0),
         0,
       )
     : 0
@@ -223,8 +236,13 @@ function normalizeVoteReceipt(dto, code, optionIndex) {
     accepted: Boolean(valueFrom(source, 'accepted', 'success', 'Accepted', 'Success') ?? true),
     code: String(valueFrom(source, 'code', 'pollCode', 'Code', 'PollCode') ?? code),
     optionIndex: Number(
-      valueFrom(source, 'optionIndex', 'selectedOptionIndex', 'OptionIndex', 'SelectedOptionIndex') ??
-        optionIndex,
+      valueFrom(
+        source,
+        'optionIndex',
+        'selectedOptionIndex',
+        'OptionIndex',
+        'SelectedOptionIndex',
+      ) ?? optionIndex,
     ),
     submittedAt: valueFrom(source, 'submittedAt', 'createdAt', 'SubmittedAt', 'CreatedAt') ?? null,
   }

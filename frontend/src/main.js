@@ -1,14 +1,20 @@
 import './assets/main.css'
 
 import { createApp } from 'vue'
-import { installAuthentication } from './auth/auth0'
+import { initializeAuthentication, invalidateAuthentication } from './auth/auth'
 import App from './App.vue'
 import router from './router'
 
-const app = createApp(App)
+async function bootstrap() {
+  try {
+    await initializeAuthentication()
+  } catch {
+    invalidateAuthentication('')
+  }
 
-// Install the router first so Auth0 can restore the protected route after its callback.
-app.use(router)
-installAuthentication(app)
+  const app = createApp(App)
+  app.use(router)
+  app.mount('#app')
+}
 
-app.mount('#app')
+void bootstrap()

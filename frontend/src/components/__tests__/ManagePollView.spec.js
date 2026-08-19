@@ -10,7 +10,7 @@ const apiMock = vi.hoisted(() => ({
 }))
 
 const authMock = vi.hoisted(() => ({
-  login: vi.fn(),
+  invalidateAuthentication: vi.fn(),
 }))
 
 const liveResultsMock = vi.hoisted(() => ({
@@ -22,8 +22,8 @@ vi.mock('@/services/api', () => ({
   getPoll: apiMock.getPoll,
 }))
 
-vi.mock('@/auth/auth0', () => ({
-  useAuthentication: () => ({ login: authMock.login }),
+vi.mock('@/auth/auth', () => ({
+  invalidateAuthentication: authMock.invalidateAuthentication,
 }))
 
 vi.mock('@/composables/useLivePollResults', () => ({
@@ -82,6 +82,7 @@ async function mountManageView(code = 'ABC123') {
       { path: '/poll/:code/manage', name: 'manage-poll', component: ManagePollView },
       { path: '/poll/:code', name: 'vote', component: EmptyView },
       { path: '/poll/:code/results', name: 'poll-results', component: EmptyView },
+      { path: '/login', name: 'login', component: EmptyView },
       { path: '/', name: 'home', component: EmptyView },
     ],
   })
@@ -103,7 +104,7 @@ async function mountManageView(code = 'ABC123') {
 beforeEach(() => {
   apiMock.closePoll.mockReset()
   apiMock.getPoll.mockReset()
-  authMock.login.mockReset()
+  authMock.invalidateAuthentication.mockReset()
   liveResultsMock.useLivePollResults.mockReset()
 
   apiMock.getPoll.mockResolvedValue(samplePoll)
@@ -175,6 +176,32 @@ describe('ManagePollView', () => {
 
     expect(wrapper.text()).toContain('You do not own this poll, so you cannot close it.')
     expect(wrapper.find('[data-test="open-close-dialog"]').exists()).toBe(true)
+  })
+
+  it('invalidates an expired session and offers local login with the manage redirect', async () => {
+    apiMock.closePoll.mockRejectedValue({ status: 401, message: 'Unauthorized' })
+
+    const { router, wrapper } = await mountManageView()
+    const routerPush = vi.spyOn(router, 'push').mockResolvedValue()
+    await flushPromises()
+
+    await wrapper.get('[data-test="open-close-dialog"]').trigger('click')
+    await wrapper.get('[data-test="confirm-close"]').trigger('click')
+    await flushPromises()
+
+    expect(authMock.invalidateAuthentication).toHaveBeenCalledOnce()
+    expect(wrapper.text()).toContain('Your session has expired. Sign in again')
+
+    const loginButton = wrapper
+      .findAll('button')
+      .find((button) => button.text() === 'Sign in again')
+    await loginButton.trigger('click')
+    await flushPromises()
+
+    expect(routerPush).toHaveBeenCalledExactlyOnceWith({
+      name: 'login',
+      query: { redirect: '/poll/ABC123/manage' },
+    })
   })
 
   it('treats an already-closed backend response as closed without deleting results', async () => {
