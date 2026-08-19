@@ -13,17 +13,49 @@ public class PollContext : DbContext
     {
         base.OnModelCreating(modelBuilder);
 
+        modelBuilder.Entity<UserReference>(entity =>
+        {
+            entity.ToTable(
+                "AspNetUsers",
+                table => table.ExcludeFromMigrations());
+
+            entity.HasKey(u => u.UserID);
+
+            entity.Property(u => u.UserID)
+                .HasColumnName("UserID");
+        });
+
         modelBuilder.Entity<Poll>(entity =>
         {
             entity.ToTable("Polls");
             entity.HasKey(p => p.PollID);
             entity.Property(p => p.PollID).UseIdentityByDefaultColumn();
-            entity.Property(p => p.Url).HasMaxLength(8).IsRequired();
-            entity.HasIndex(p => p.Url).IsUnique();
-            entity.Property(p => p.Question).HasMaxLength(500).IsRequired();
-            entity.Property(p => p.CreatorUserID).IsRequired();
-            entity.Property(p => p.IsClosed).HasDefaultValue(false);
-            entity.Property(p => p.CreatedAt).HasDefaultValueSql("NOW()");
+
+            entity.Property(p => p.Url)
+                .HasMaxLength(8)
+                .IsRequired();
+
+            entity.HasIndex(p => p.Url)
+                .IsUnique();
+
+            entity.Property(p => p.Question)
+                .HasMaxLength(500)
+                .IsRequired();
+
+            entity.Property(p => p.CreatorUserID)
+                .IsRequired();
+
+            entity.HasOne(p => p.Creator)
+                .WithMany()
+                .HasForeignKey(p => p.CreatorUserID)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            entity.Property(p => p.IsClosed)
+                .HasDefaultValue(false);
+
+            entity.Property(p => p.CreatedAt)
+                .HasDefaultValueSql("NOW()");
+
             entity.HasIndex(p => p.CreatorUserID);
         });
 

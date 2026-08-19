@@ -7,6 +7,7 @@ public class Poll
     public long PollID { get; set; }
     [Required, MaxLength(8)] public string Url { get; set; } = string.Empty;
     [Required] public string CreatorUserID { get; set; } = string.Empty;
+    public UserReference Creator { get; set; } = null!;
     [Required, MaxLength(500)] public string Question { get; set; } = string.Empty;
     public bool IsClosed { get; set; }
     public DateTime CreatedAt { get; set; }
